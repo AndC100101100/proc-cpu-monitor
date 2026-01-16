@@ -5,7 +5,13 @@ declare -A previous=()
 
 # copy data from current array to previous array
 copy-data(){
+	previous=()
 
+	local key value
+	for key in "${!current[0]}"; do
+		value=${current[$key]}
+		previous[$key]=$value
+	done
 }
 
 read-proc() {
@@ -29,4 +35,47 @@ read-proc() {
 	
 }
 
-read-proc
+
+
+print-bar() {
+	local key=$1
+
+	local busy1 idle1 busy2 idle2
+	read -r busy1 idle1 <<< "${previous[$key]}"
+	read -r busy2 idle2 <<< "${current[$key]}"
+	
+	local busy=$((busy2 - busy1))
+	local idle=$((idle2 - idle1))
+	local total=$((busy + idle))
+
+	local perc=$((100 * busy / total))
+	echo "key is $perc% busy"
+
+}
+
+
+
+visualize-data(){
+	local key
+	for key in "${current[@]}"; do
+		print-bar "$key"
+	done
+}
+
+
+
+main(){
+	read-proc
+	echo 'waiting for data...'
+	sleep 1
+	
+	while true; do
+		copy-data
+		read-proc
+		visualize-data
+		sleep 1
+	done
+}
+
+main "$@"
+
