@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+declare -A current=() #associative array
+declare -A previous=()
+
+# copy data from current array to previous array
+copy-data(){
+
+}
+
+read-proc() {
+	local key user nice system idle iowait
+	local irq softirq steal guest guest_nice
+
+	local busy value
+	while read -r key user nice system idle iowait \
+	    irq softirq steal guest guest_nice; do
+		if [[ $key != cpu* ]]; then
+			continue
+		fi
+
+		busy=$(( user + nice + system + irq + softirq + steal + guest + nice))
+		idle=$(( idle + iowait))
+
+		value="$busy $idle"
+
+		current[$key]=$value
+	done < /proc/stat
+	
+}
+
+read-proc
