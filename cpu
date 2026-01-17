@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-declare -A current=() #associative array
-declare -A previous=()
+declare current=() #indexed arrays, we doing numbers now
+declare previous=()
 
 # copy data from current array to previous array
 copy-data(){
@@ -18,19 +18,19 @@ read-proc() {
 	local key user nice system idle iowait
 	local irq softirq steal guest guest_nice
 
-	local busy value
+	local busy value num
 	while read -r key user nice system idle iowait \
 	    irq softirq steal guest guest_nice; do
 		if [[ $key != cpu* ]]; then
 			continue
 		fi
-
+		num=${key#cpu} #bash is crazy, we are taking the key and using the pound operator to remove 'cpu' string
 		busy=$(( user + nice + system + irq + softirq + steal + guest + nice))
 		idle=$(( idle + iowait))
 
 		value="$busy $idle"
 
-		current[$key]=$value
+		current[$num]=$value
 	done < /proc/stat
 	
 }
@@ -54,7 +54,25 @@ print-bar() {
 	local frac=$((usage % 10))
 	local perc=$int.$frac
 
-	echo "$key is $perc% busy"
+	# ---
+	
+
+	local bar_char='|'
+	local empty_char=' '
+	local length=50
+	local num_bars=$((usage * length / 1000))
+
+	local i
+	local s='['
+	for ((i = 0; i < num_bars; i++)); do
+		s+=$bar_char
+	done
+	for((i=0; i < length; i++)); do
+		s+=$empty_char
+	done
+	s+=']'
+	
+	echo "$s cpu$key $perc%"
 
 }
 
@@ -69,12 +87,26 @@ visualize-data(){
 }
 
 
+cleanup(){
+	printf '\e[?1049l'	# disable alternate buffer
+	printf '\e[?25h'	# show cursor
+}
+
 
 main(){
 	read-proc
 	echo 'waiting for data...'
 	sleep 1
 	
+	trap cleanup EXIT
+
+	printf '\e[?1049h'	# enable alternate buffer
+	printf '\e[?25l'	# hide the cursor
+	printf '\e[H'	# move the cursor home
+
+
+
+
 	while true; do
 		copy-data
 		read-proc
