@@ -8,7 +8,7 @@ copy-data(){
 	previous=()
 
 	local key value
-	for key in "${!current[0]}"; do
+	for key in "${!current[@]}"; do
 		value=${current[$key]}
 		previous[$key]=$value
 	done
@@ -48,8 +48,13 @@ print-bar() {
 	local idle=$((idle2 - idle1))
 	local total=$((busy + idle))
 
-	local perc=$((100 * busy / total))
-	echo "key is $perc% busy"
+	local usage=$((1000 * busy / total))
+
+	local int=$((usage / 10))
+	local frac=$((usage % 10))
+	local perc=$int.$frac
+
+	echo "$key is $perc% busy"
 
 }
 
@@ -57,9 +62,10 @@ print-bar() {
 
 visualize-data(){
 	local key
-	for key in "${current[@]}"; do
+	for key in "${!current[@]}"; do
 		print-bar "$key"
 	done
+	echo
 }
 
 
