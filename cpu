@@ -115,8 +115,8 @@ update-window-size() {
 		# Buffer room needed
 		local cpus=( "${!current[@]}" )
 		local highest_cpu=${cpus[-1]}
-		# [] + ' cpu' + number + "100.0%"
-		local i=$((2 + 4 + ${#highest_cpu} + 6))
+		# [] + ' cpu' + number + " 100.0%"
+		local i=$((2 + 4 + ${#highest_cpu} + 7))
 		BAR_LENGTH=$((COLUMNS - i))
 	fi
 }
