@@ -2,7 +2,7 @@
 
 "The `/proc` filesystem in Linux is a pseudo-filesystem that provides an interface to kernel data structures. Unlike regular filesystems that store data on disk, `/proc` exists purely in memory, exposing kernel and process information as files and directories."
 
-A BIG chunck of the code in this repo was made by one of the coolest people on the internet, YSAP [You Suck At Programming](https://www.youtube.com/@yousuckatprogramming) as part of his bash learning series. Dave is a great content creator and a crazy good programmer, so I would advise if you want to learn bash and or programming, YSAP should be your go-to.
+A BIG chunck of the code in this repo was made by one of the coolest persons on the internet, YSAP [You Suck At Programming](https://www.youtube.com/@yousuckatprogramming) as part of his bash learning series. Dave is a great content creator and a crazy good programmer, so I would advise if you want to learn bash and or programming, YSAP should be your go-to.
 
 So yeah, I liked the video and concept a lot, this document will go over a few things I learned along the way after looking and the main code and some additions I made.
 # Proc monitoring
