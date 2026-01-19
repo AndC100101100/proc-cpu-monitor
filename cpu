@@ -6,20 +6,47 @@ declare previous=()
 EMPTY_CHAR=' '
 BAR_CHAR='|'
 BAR_LENGTH=50
+declare -A history
+HISTORY_LENGTH=15
+
 
 if [[ -z $NO_COLOR ]]; then
 	COLOR1=$'\e[34m'
 	COLOR2=$'\e[35m'
 	COLOR3=$'\e[36m'
 	DIM=$'\e[2m'
+	COLOR_IDLE=$'\e[32m'      # Green: < 25%
+	COLOR_LOW=$'\e[36m'       # Cyan: 25-50%
+	COLOR_MED=$'\e[33m'       # Yellow: 50-75%
+	COLOR_HIGH=$'\e[31m'  
 	RST=$'\e[0m'
 else
 	COLOR1=
 	COLOR2=
 	COLOR3=
 	DIM=
+	COLOR_IDLE=
+	COLOR_LOW=
+	COLOR_MED=
+	COLOR_HIGH=
 	RST=
 fi
+
+
+
+get-usage-color() {
+	local usage=$1  # usage is in range 0-1000
+	
+	if (( usage < 250 )); then
+		echo "$COLOR_IDLE"
+	elif (( usage < 500 )); then
+		echo "$COLOR_LOW"
+	elif (( usage < 750 )); then
+		echo "$COLOR_MED"
+	else
+		echo "$COLOR_HIGH"
+	fi
+}
 	
 # copy data from current array to previous array
 copy-data(){
@@ -43,7 +70,7 @@ read-proc() {
 			continue
 		fi
 		num=${key#cpu} #bash is crazy, we are taking the key and using the pound operator to remove 'cpu' string
-		busy=$(( user + nice + system + irq + softirq + steal + guest + nice))
+		busy=$(( user + nice + system + irq + softirq + steal + guest_nice))
 		idle=$(( idle + iowait))
 
 		value="$busy $idle"
@@ -53,6 +80,49 @@ read-proc() {
 	
 }
 
+
+
+add-to-history() {
+	local cpu=$1
+	local usage=$2
+	
+	# Get current history for this CPU
+	local h="${history[$cpu]}"
+	
+	# Append new value
+	if [[ -z $h ]]; then
+		h="$usage"
+	else
+		h="$h $usage"
+	fi
+	
+	# Trim to keep only last N values
+	local count
+	count=$(echo "$h" | wc -w)
+	if (( count > HISTORY_LENGTH )); then
+		h=$(echo "$h" | awk '{for(i=NF-'"$HISTORY_LENGTH"'+1; i<=NF; i++) printf "%s ", $i}')
+	fi
+	
+	history[$cpu]=$h
+}
+
+render-sparkline() {
+	local data=$1
+	
+	# Unicode block characters for graph
+	local chars=('▁' '▂' '▃' '▄' '▅' '▆' '▇' '█')
+	
+	local output=""
+	local value
+	for value in $data; do
+		# Map 0-1000 to 0-7 (array index)
+		local idx=$((value * 8 / 1000))
+		(( idx > 7 )) && idx=7
+		output+="${chars[$idx]}"
+	done
+	
+	echo "$output"
+}
 
 
 print-bar() {
@@ -67,28 +137,63 @@ print-bar() {
 	local total=$((busy + idle))
 
 	local usage=$((1000 * busy / total))
+	
+	# Add to history
+	add-to-history "$key" "$usage"
 
 	local int=$((usage / 10))
 	local frac=$((usage % 10))
 	local perc=$int.$frac
 
-	# ---
+	local bar_color
+	bar_color=$(get-usage-color "$usage")
 	
-
 	local num_bars=$((usage * BAR_LENGTH / 1000))
 
 	local i
 	local s='['
 	for ((i = 0; i < num_bars; i++)); do
-		s+=$COLOR1$BAR_CHAR$RST
+		s+=$bar_color$BAR_CHAR$RST
 	done
 	for((i= num_bars; i < BAR_LENGTH; i++)); do
 		s+=$EMPTY_CHAR
 	done
 	s+=']'
 	
-	echo "$s ${COLOR2}cpu$key$RST $COLOR3$perc%$RST"
+	# Render sparkline
+	local sparkline
+	sparkline=$(render-sparkline "${history[$key]}")
+	
+	echo "$s ${COLOR2}cpu$key$RST $bar_color$perc%$RST ${DIM}$sparkline$RST"
+}
 
+
+get-system-stats() {
+	local stats=""
+	
+	# Load average
+	local load1 load5 load15 rest
+	read -r load1 load5 load15 rest < /proc/loadavg
+	stats+="${COLOR2}Load:$RST $COLOR3$load1$RST $load5 $load15  "
+	
+	# Uptime
+	local uptime_sec idle_sec
+	read -r uptime_sec idle_sec < /proc/uptime
+	local days hours mins
+	days=$((${uptime_sec%.*} / 86400))
+	hours=$(((${uptime_sec%.*} % 86400) / 3600))
+	mins=$(((${uptime_sec%.*} % 3600) / 60))
+	stats+="${COLOR2}Uptime:$RST ${COLOR3}${days}d${RST} ${hours}h ${mins}m  "
+	
+	# CPU temp (if available)
+	if [[ -f /sys/class/thermal/thermal_zone0/temp ]]; then
+		local temp
+		read -r temp < /sys/class/thermal/thermal_zone0/temp
+		temp=$((temp / 1000))
+		stats+="${COLOR2}Temp:$RST $COLOR3${temp}°C$RST"
+	fi
+	
+	echo "$stats"
 }
 
 
@@ -97,6 +202,10 @@ visualize-data(){
 	local now
 	printf -v now '%(%Y-%m-%dT%H:%M:%S%z)T'
 	echo "${DIM}CPU Usage for $COLOR3$HOSTNAME$RST - $now$RST"
+	
+
+	get-system-stats
+	echo ""  # Blank line for spacing
 
 	local key
 	for key in "${!current[@]}"; do
