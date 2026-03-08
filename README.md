@@ -3,12 +3,12 @@
 "The `/proc` filesystem in Linux is a pseudo-filesystem that provides an interface to kernel data structures. Unlike regular filesystems that store data on disk, `/proc` exists purely in memory, exposing kernel and process information as files and directories."
 > *— The Linux Kernel Documentation*
 
-A BIG chunck of the code in this repo was made by one of the coolest persons on the internet, YSAP [You Suck At Programming](https://www.youtube.com/@yousuckatprogramming) as part of his bash learning series. Dave is a great content creator and a crazy good programmer, so I would advise if you want to learn bash and or programming, YSAP should be your go-to.
+A BIG chunk of the code in this repo was made by one of the coolest persons on the internet, YSAP [You Suck At Programming](https://www.youtube.com/@yousuckatprogramming) as part of his bash learning series. Dave is a great content creator and a crazy good programmer, so I would advise if you want to learn bash and or programming, YSAP should be your go-to.
 
 I liked the video and concept a lot. With that said, here's what I dug into after watching the series and poking around the code.
 
 # Proc monitoring
-This script graphs and visualizations are able to be done thanks to the misc kernel statistics written into `/proc/stat`. This file contains plain text information about the kernel activity. In this case, the information written into it will always be an aggregate of numbers since the system first booted.
+This script's graphs and visualizations are able to be done thanks to the misc kernel statistics written into `/proc/stat`. This file contains plain text information about the kernel activity. In this case, the information written into it will always be an aggregate of numbers since the system first booted.
 
 You can take a quick look at how this file looks with `cat /proc/stat`
 
@@ -43,7 +43,7 @@ On the other hand, in a multi core CPU, the usual task waiting for the completio
 
 In a way, modern linux iowait is a bit different. We can make sense of it as the percentage of time the system was idle, in which at least one process was actually waiting for disk I/O to finish.
 
-IOWait has its merits as a metric, but relying on it as the sole source of truth for performance evaluation would be misleading, its just iowait is readily available on most linux systems.
+IOWait has its merits as a metric, but relying on it as the sole source of truth for performance evaluation would be misleading, it's just iowait is readily available on most linux systems.
  
 iowait is still a steady solution to detect certain bottlenecks. Certain services may find themselves taking hits in performance while CPU usage stays normal. When it comes to databases, tools like `iostat` may show high `%util` and `await` times on the database's disk (/dev/sda), with high `%wa` (I/O wait) in vmstat. This could be representative of missing indexes when doing lookups or in the usage of complex queries, causing slowness in transactions.
 
